@@ -10,7 +10,7 @@ on:
   pull_request:
     branches: [testing, main]
   push:
-    branches: [testing, main]
+    branches: [testing, main, french-piper-tts]
 
 permissions:
   contents: read
@@ -72,3 +72,8 @@ jobs:
         with:
           name: unit-test-reports
           path: android/app/build/reports/tests/
+      - name: Upload debug APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: debug-apk
+          path: android/app/build/outputs/apk/debug/*.apk
