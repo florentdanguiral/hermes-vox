@@ -379,7 +379,13 @@ class MainActivity : AppCompatActivity() {
             wireSoul(it)
         }
         c.attachListeners(listener)
-        if (!ModelCatalog.isInstalled(this, ModelCatalog.DEFAULT_STT_MODEL)) {
+        // The STT model only gates the call on the ON-DEVICE backend — a remote
+        // (or platform) backend never loads it. When local, require the
+        // SELECTED model (the old check hardcoded whisper-base and misfired for
+        // a whisper-small user too).
+        val sttBackend = prefs.getString(ModelCatalog.KEY_STT_BACKEND, ModelCatalog.BACKEND_ONDEVICE) ?: ModelCatalog.BACKEND_ONDEVICE
+        val sttModel = prefs.getString(ModelCatalog.KEY_STT_MODEL, ModelCatalog.DEFAULT_STT_MODEL) ?: ModelCatalog.DEFAULT_STT_MODEL
+        if (sttBackend == ModelCatalog.BACKEND_ONDEVICE && !ModelCatalog.isInstalled(this, sttModel)) {
             // #12: this used to be a dead label ("...Settings > Voice models").
             // It is now a tappable warning pill that opens the Voice-models
             // download screen (ModelsActivity) — the actual fix, not a name.
