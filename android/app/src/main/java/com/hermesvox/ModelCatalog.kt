@@ -79,7 +79,15 @@ object ModelCatalog {
             "On-device expression layer (Enhanced Realtime, alpha)", true, 7,
             "181938105e0eefd105961417e8da75903eacda102c4fce9ce90f50b97139a63c", false,
             "https://huggingface.co/litert-community/gemma-4-E2B-it-litert-lm/resolve/main/gemma-4-E2B-it.litertlm",
-            "Optional on-device presence layer for Enhanced Realtime (alpha) mode — runs on the GPU")
+            "Optional on-device presence layer for Enhanced Realtime (alpha) mode — runs on the GPU"),
+        // Piper fr-FR (siwis, medium), the upstream k2-fsa packaging; sha256 and
+        // size are from the release artifact itself. Opt-in (not recommended):
+        // only speakers of the language need the 67 MB download.
+        ModelSpec("piper-fr-siwis", "Piper · fr-FR (siwis, medium)", "tts", "vits-piper-fr_FR-siwis-medium.tar.bz2", 67.2,
+            "Piper fr-FR canonical siwis medium · the French voice", true, 8,
+            "375909aa30842b3a4efa10b1beb1d761af792960ae6873b4d53889f96c66195b", false,
+            "https://github.com/k2-fsa/sherpa-onnx/releases/download/tts-models/vits-piper-fr_FR-siwis-medium.tar.bz2",
+            "Speaks Hermes' replies aloud in French — fully offline")
     )
 
     // #114-denominator: REQUIRED and RECOMMENDED are THE SAME SET, everywhere.
@@ -92,8 +100,10 @@ object ModelCatalog {
     fun missingRequired(context: Context): List<ModelSpec> = required.filter { !isInstalled(context, it.id) }
 
     /** The TTS engine token used when the user has not chosen one: the best installed
-     *  on-device voice (Supertonic, then Piper), else the system voice. */
+     *  on-device voice for the DEVICE'S language (French → Piper FR, else Supertonic,
+     *  then Piper), else the system voice. */
     fun defaultTts(context: Context): String = when {
+        java.util.Locale.getDefault().language == "fr" && isInstalled(context, "piper-fr-siwis") -> "piper-fr"
         isInstalled(context, "supertonic") -> "supertonic"
         isInstalled(context, "piper-lessac") -> "piper"
         else -> "system"
@@ -171,7 +181,7 @@ object ModelCatalog {
                 }
             "parakeet-v2" -> listOf("encoder.int8.onnx", "decoder.int8.onnx", "joiner.int8.onnx", "tokens.txt")
             "silero-vad" -> listOf("silero_vad.onnx")
-            "piper-lessac" -> listOf("model.onnx", "tokens.txt")
+            "piper-lessac", "piper-fr-siwis" -> listOf("model.onnx", "tokens.txt")
             "supertonic" -> listOf("duration_predictor.int8.onnx", "text_encoder.int8.onnx",
                 "vector_estimator.int8.onnx", "vocoder.int8.onnx", "tts.json", "unicode_indexer.bin", "voice.bin")
             "gemma-e2b" -> listOf("gemma-4-E2B-it.litertlm")

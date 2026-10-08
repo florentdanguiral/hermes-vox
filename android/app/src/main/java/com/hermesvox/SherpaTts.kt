@@ -26,6 +26,7 @@ import kotlin.concurrent.thread
  */
 enum class SherpaVoice(val modelId: String, val displayName: String) {
     PIPER("piper-lessac", "Piper"),
+    PIPER_FR("piper-fr-siwis", "Piper FR"),
     SUPERTONIC("supertonic", "Supertonic"),
 }
 
@@ -128,7 +129,7 @@ class SherpaTts(private val context: Context, private val voice: SherpaVoice = S
 
     /** One phrase through the engine, with the voice's own controls. */
     private fun synth(eng: OfflineTts, text: String): GeneratedAudio = when (voice) {
-        SherpaVoice.PIPER -> eng.generate(text, 0, voiceSpeed)
+        SherpaVoice.PIPER, SherpaVoice.PIPER_FR -> eng.generate(text, 0, voiceSpeed)
         SherpaVoice.SUPERTONIC -> {
             val m = mood
             eng.generateWithConfig(text, GenerationConfig().apply {

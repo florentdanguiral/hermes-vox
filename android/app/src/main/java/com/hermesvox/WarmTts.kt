@@ -45,7 +45,9 @@ class SystemTts(private val context: Context) : VoxTts {
                 if (code == TextToSpeech.SUCCESS) {
                     tts?.setPitch(pitch)
                     tts?.setSpeechRate(rate)
-                    tts?.language = Locale.US
+                    // The device's language, not a hardcoded US locale: a French
+                    // (or any non-English) system voice must not be forced to en-US.
+                    tts?.language = Locale.getDefault()
                 }
                 onReady(code == TextToSpeech.SUCCESS)
             }
@@ -110,6 +112,8 @@ fun buildTts(context: Context, prefer: String): VoxTts {
         when (prefer) {
             "piper" -> if (ModelCatalog.isInstalled(context, "piper-lessac")) SherpaTts(context, SherpaVoice.PIPER)
                 else { VoxLog.d("tts: piper requested but model not installed -> system fallback"); SystemTts(context) }
+            "piper-fr" -> if (ModelCatalog.isInstalled(context, "piper-fr-siwis")) SherpaTts(context, SherpaVoice.PIPER_FR)
+                else { VoxLog.d("tts: piper-fr requested but model not installed -> system fallback"); SystemTts(context) }
             "supertonic" -> if (ModelCatalog.isInstalled(context, "supertonic")) SherpaTts(context, SherpaVoice.SUPERTONIC)
                 else { VoxLog.d("tts: supertonic requested but model not installed -> system fallback"); SystemTts(context) }
             // "kokoro" was offered but its runtime was a stub that always fell back to the

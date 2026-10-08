@@ -420,8 +420,8 @@ class SettingsActivity : AppCompatActivity() {
         }
         findViewById<LinearLayout>(R.id.row_tts).setOnClickListener {
             pick("Text-to-speech",
-                arrayOf("Supertonic (on-device, recommended)", "Piper (on-device, lighter)", "System (fallback)"),
-                arrayOf("supertonic", "piper", "system"), "tts", R.id.set_tts_val) { syncSpeakerRow(); previewVoice() }
+                arrayOf("Supertonic (on-device, recommended)", "Piper (on-device, lighter)", "Piper FR (on-device, French)", "System (fallback)"),
+                arrayOf("supertonic", "piper", "piper-fr", "system"), "tts", R.id.set_tts_val) { syncSpeakerRow(); previewVoice() }
         }
         // Voice = the SYNTHESIS REGISTER (system/bright/deep). The old "warm"
         // option was removed — WarmTts is a no-op stub, so it never produced
@@ -1017,7 +1017,7 @@ class SettingsActivity : AppCompatActivity() {
         val tok = prefs.getString(prefKey, default) ?: default
         return when (tok) {
             "on-device" -> "On-device"
-            "system" -> "System"; "kokoro" -> "System"; "piper" -> "Piper"; "supertonic" -> "Supertonic"
+            "system" -> "System"; "kokoro" -> "System"; "piper" -> "Piper"; "piper-fr" -> "Piper FR"; "supertonic" -> "Supertonic"
             "warm" -> "Warm"; "bright" -> "Bright"; "deep" -> "Deep"
             "dark" -> "Dark"; "light" -> "Light"
             else -> tok

@@ -245,7 +245,7 @@ class ModelDownloader(context: Context) {
                 rename(".*-decoder\\.onnx", "decoder.onnx")
                 rename(".*-tokens\\.txt", "tokens.txt")
             }
-            "piper-lessac" -> {
+            "piper-lessac", "piper-fr-siwis" -> {
                 rename(".*\\.onnx", "model.onnx")
             }
         }
