@@ -101,7 +101,14 @@ class ConnectionPhaseTest {
 
     @Test fun wrong_service_or_route_is_a_gateway_error_not_a_network_problem() {
         assertEquals(Pr.GATEWAY_ERROR, ConnectionPhase.classify(404, "", SKIP, ""))
-        assertEquals(Pr.GATEWAY_ERROR, ConnectionPhase.classify(200, "", 400, ""))
+        // A stream-leg 400 is NOT a gateway error once the ping leg succeeded:
+        // /v1/models answered 200 with this key, and the stream probe payload is
+        // deliberately degenerate (no input, M2 — the entity must not think).
+        // Gateways that require an input field (hermes-agent: 400 "Missing
+        // 'input' field") are answering, not failing — same gateway, same auth,
+        // validation reached. Reported OK so the user is not sent hunting for a
+        // problem that isn't there.
+        assertEquals(Pr.OK, ConnectionPhase.classify(200, "", 400, ""))
         assertEquals(Pr.GATEWAY_ERROR, ConnectionPhase.classify(200, "", NONE, "SSLException: bad record"))
     }
 

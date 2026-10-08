@@ -147,6 +147,14 @@ object ConnectionPhase {
         }
         if (streamCode == 401 || streamCode == 403) return Probe.AUTH
         if (cold(streamCode)) return Probe.COLD
+        // A validation 400 is the gateway ANSWERING, not failing. The probe POST is
+        // intentionally degenerate (M2: no input, so the entity never generates),
+        // and OpenAI-compatible gateways that require an input field (e.g.
+        // hermes-agent's /v1/responses: "Missing 'input' field") reject the payload
+        // itself — after auth, routing and validation all ran. The ping already
+        // proved /v1/models answers with this key; a payload 400 on the stream leg
+        // proves the same route twice. Not a gateway error.
+        if (streamCode == 400) return Probe.OK
         if (streamCode < 200 || streamCode >= 400) return Probe.GATEWAY_ERROR
         return Probe.OK
     }
