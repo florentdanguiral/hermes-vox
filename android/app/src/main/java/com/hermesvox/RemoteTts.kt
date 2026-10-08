@@ -103,11 +103,11 @@ class RemoteTts(private val context: Context) : VoxTts {
                         try { c.errorStream?.close() } catch (_: Throwable) {}
                         VoxLog.w("event=tts-remote err=http-$code")
                         onDone()
-                        return
+                        return@thread
                     }
                     c.inputStream.use { ins -> tmp.outputStream().use { ins.copyTo(it) } }
                 } finally { c.disconnect() }
-                if (myGen != speakGen) { tmp.delete(); onDone(); return }   // superseded while synthesizing
+                if (myGen != speakGen) { tmp.delete(); onDone(); return@thread }   // superseded while synthesizing
                 val ms = android.os.SystemClock.uptimeMillis() - t0
                 VoxLog.dd("event=tts-remote ms=$ms textLen=${text.length} bytes=${tmp.length()}")
                 val mp = MediaPlayer()
