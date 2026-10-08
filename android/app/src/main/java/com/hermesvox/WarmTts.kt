@@ -114,6 +114,9 @@ fun buildTts(context: Context, prefer: String): VoxTts {
                 else { VoxLog.d("tts: piper requested but model not installed -> system fallback"); SystemTts(context) }
             "piper-fr" -> if (ModelCatalog.isInstalled(context, "piper-fr-siwis")) SherpaTts(context, SherpaVoice.PIPER_FR)
                 else { VoxLog.d("tts: piper-fr requested but model not installed -> system fallback"); SystemTts(context) }
+            "remote" -> if (sttBaseUrl(context.getSharedPreferences("hv", android.content.Context.MODE_PRIVATE)
+                    .getString(KEY_TTS_REMOTE_URL, "")).isNotBlank()) RemoteTts(context)
+                else { VoxLog.d("tts: remote requested but URL not set -> system fallback"); SystemTts(context) }
             "supertonic" -> if (ModelCatalog.isInstalled(context, "supertonic")) SherpaTts(context, SherpaVoice.SUPERTONIC)
                 else { VoxLog.d("tts: supertonic requested but model not installed -> system fallback"); SystemTts(context) }
             // "kokoro" was offered but its runtime was a stub that always fell back to the

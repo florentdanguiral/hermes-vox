@@ -37,7 +37,7 @@ class ModelsActivity : AppCompatActivity() {
     }
     private val cards = mutableMapOf<String, CardUi>()
     // The required set = the recommended set (single convention, see header).
-    private val required: List<ModelSpec> get() = ModelCatalog.required
+    private val required: List<ModelSpec> get() = ModelCatalog.requiredFor(this)
 
     private class CardUi(val action: Button, val state: TextView, val progress: ProgressBar, val size: TextView)
 
@@ -53,7 +53,7 @@ class ModelsActivity : AppCompatActivity() {
         downloadAll.setOnClickListener {
             // Installs the REQUIRED (recommended) set only — same set the header
             // counts and the Settings badge counts (#114-denominator).
-            ModelCatalog.required.filter { !ModelCatalog.isInstalled(this, it.id) }
+            ModelCatalog.requiredFor(this).filter { !ModelCatalog.isInstalled(this, it.id) }
                 .forEach { ModelDownloads.enqueue(this, it) }
         }
 
@@ -70,11 +70,12 @@ class ModelsActivity : AppCompatActivity() {
         // downloads happen (matches the onboarding step + main-screen coach
         // marks copy, so a term always carries the same meaning).
         findViewById<TextView>(R.id.m_how)?.text =
-            "The required set is your offline voice: hearing you (STT · Whisper), " +
-            "knowing when you start and stop talking (VAD · Silero), and speaking " +
-            "replies (TTS · Supertonic) — all on-device. Gemma below is optional: it " +
-            "powers Enhanced Realtime (alpha) phone-call presence. Downloads keep going " +
-            "if you leave this screen, and a stopped download resumes where it left off."
+            "The required set follows your configuration: hearing you (the on-device " +
+            "STT model — only while the on-device backend is selected, remote STT needs " +
+            "none), knowing when you start and stop talking (VAD · Silero, always), and " +
+            "speaking replies (the selected on-device voice — remote or system TTS needs " +
+            "no model). Downloads keep going if you leave this screen, and a stopped " +
+            "download resumes where it left off."
         buildCards()
     }
 

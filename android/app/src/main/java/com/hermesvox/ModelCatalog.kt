@@ -99,6 +99,37 @@ object ModelCatalog {
     /** Required models that are not yet installed (app-private model dirs). */
     fun missingRequired(context: Context): List<ModelSpec> = required.filter { !isInstalled(context, it.id) }
 
+    /** Backend-aware required set: the models the CURRENT configuration actually
+     *  needs, instead of the fixed recommended set. The local-first defaults are
+     *  untouched (blank prefs -> on-device STT + default TTS), so nothing changes
+     *  for the shipped path until the user picks remote backends:
+     *  - Silero VAD is ALWAYS required (it drives barge-in in every voice mode);
+     *  - the STT model only when the backend is on-device;
+     *  - the TTS model only for the engine actually selected (remote/system need none).
+     *  A user on remote STT + remote TTS is asked for 0.6 MB, not 290 MB of
+     *  English models they will never load. */
+    fun requiredFor(context: Context): List<ModelSpec> {
+        val sp = context.getSharedPreferences("hv", Context.MODE_PRIVATE)
+        val out = mutableListOf<ModelSpec>()
+        blessed.firstOrNull { it.id == "silero-vad" }?.let { out += it }
+        val sttBackend = sp.getString(KEY_STT_BACKEND, BACKEND_ONDEVICE) ?: BACKEND_ONDEVICE
+        if (sttBackend == BACKEND_ONDEVICE) {
+            val model = sp.getString(KEY_STT_MODEL, DEFAULT_STT_MODEL) ?: DEFAULT_STT_MODEL
+            blessed.firstOrNull { it.id == model }?.let { out += it }
+        }
+        when (sp.getString("tts", null) ?: defaultTts(context)) {
+            "supertonic" -> blessed.firstOrNull { it.id == "supertonic" }?.let { out += it }
+            "piper" -> blessed.firstOrNull { it.id == "piper-lessac" }?.let { out += it }
+            "piper-fr" -> blessed.firstOrNull { it.id == "piper-fr-siwis" }?.let { out += it }
+            // "remote" / "system" (and unknown tokens) -> no on-device TTS model.
+        }
+        return out
+    }
+
+    /** Backend-aware missing set (the gate + Models header denominator). */
+    fun missingRequiredFor(context: Context): List<ModelSpec> =
+        requiredFor(context).filter { !isInstalled(context, it.id) }
+
     /** The TTS engine token used when the user has not chosen one: the best installed
      *  on-device voice for the DEVICE'S language (French → Piper FR, else Supertonic,
      *  then Piper), else the system voice. */

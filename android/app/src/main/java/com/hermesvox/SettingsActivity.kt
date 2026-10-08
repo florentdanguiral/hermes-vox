@@ -420,8 +420,8 @@ class SettingsActivity : AppCompatActivity() {
         }
         findViewById<LinearLayout>(R.id.row_tts).setOnClickListener {
             pick("Text-to-speech",
-                arrayOf("Supertonic (on-device, recommended)", "Piper (on-device, lighter)", "Piper FR (on-device, French)", "System (fallback)"),
-                arrayOf("supertonic", "piper", "piper-fr", "system"), "tts", R.id.set_tts_val) { syncSpeakerRow(); previewVoice() }
+                arrayOf("Supertonic (on-device, recommended)", "Piper (on-device, lighter)", "Piper FR (on-device, French)", "Remote (server)", "System (fallback)"),
+                arrayOf("supertonic", "piper", "piper-fr", "remote", "system"), "tts", R.id.set_tts_val) { syncSpeakerRow(); previewVoice(); refreshRemoteTtsPanel() }
         }
         // Voice = the SYNTHESIS REGISTER (system/bright/deep). The old "warm"
         // option was removed — WarmTts is a no-op stub, so it never produced
@@ -474,6 +474,7 @@ class SettingsActivity : AppCompatActivity() {
         }
         refreshModelsVal()
         bindSttRemote()
+        bindRemoteTts()
 
         refreshFlowVals()
         refreshGrpVals()   // #115: populate the Settings-home row subtitles
@@ -494,13 +495,15 @@ class SettingsActivity : AppCompatActivity() {
     }
 
     /** #114-badge: the install-progress caption for the Models row (Settings-home
-     *  group row + the sub-view row above "Voice models"). Counts ONLY the RECOMMENDED
-     *  subset of the blessed set so the home badge agrees with the Models screen's
-     *  required set (the optional extras don't inflate the denominator). */
+     *  group row + the sub-view row above "Voice models"). Counts the
+     *  backend-aware REQUIRED set so the home badge agrees with the Models
+     *  screen's required set (the optional extras don't inflate the denominator). */
     private fun refreshModelsVal() {
-        val denom = ModelCatalog.blessed.count { it.recommended }
-        val installed = ModelCatalog.blessed.count { it.recommended && ModelCatalog.isInstalled(this, it.id) }
-        val text = "$installed/$denom installed · needed for your voice"
+        val req = ModelCatalog.requiredFor(this)
+        val denom = req.size
+        val installed = req.count { ModelCatalog.isInstalled(this, it.id) }
+        val text = if (denom == 0) "none needed for your voice"
+            else "$installed/$denom installed · needed for your voice"
         findViewById<TextView>(R.id.set_models_val)?.text = text
         findViewById<TextView>(R.id.set_models_grpval)?.text = text
     }
@@ -571,6 +574,87 @@ class SettingsActivity : AppCompatActivity() {
         bindRemoteTextField(R.id.stt_remote_key, KEY_STT_REMOTE_KEY) { SecureStore.encrypt(it) ?: it }
         findViewById<LinearLayout>(R.id.row_test_stt_conn).setOnClickListener { testRemoteStt() }
         refreshSttRemotePanel()
+    }
+
+    // --- Remote TTS (server) engine: URL/model/voice/key. This panel is
+    // revealed ONLY when the TTS engine picker says "remote"; the key goes
+    // through SecureStore like the STT one. ---------------------------------
+    private fun refreshRemoteTtsPanel() {
+        val remote = prefs.getString("tts", "").orEmpty() == "remote"
+        findViewById<android.view.View>(R.id.remote_tts_panel)?.visibility =
+            if (remote) android.view.View.VISIBLE else android.view.View.GONE
+    }
+
+    private fun bindRemoteTts() {
+        loadRemoteTtsFields()
+        bindRemoteTextField(R.id.tts_remote_url, KEY_TTS_REMOTE_URL) { it.trim() }
+        bindRemoteTextField(R.id.tts_remote_model, KEY_TTS_REMOTE_MODEL) { it.trim() }
+        bindRemoteTextField(R.id.tts_remote_voice, KEY_TTS_REMOTE_VOICE) { it.trim() }
+        bindRemoteTextField(R.id.tts_remote_key, KEY_TTS_REMOTE_KEY) { SecureStore.encrypt(it) ?: it }
+        findViewById<LinearLayout>(R.id.row_test_tts_conn)?.setOnClickListener { testRemoteTts() }
+        refreshRemoteTtsPanel()
+    }
+
+    private fun loadRemoteTtsFields() {
+        findViewById<EditText>(R.id.tts_remote_url)?.setText(prefs.getString(KEY_TTS_REMOTE_URL, ""))
+        findViewById<EditText>(R.id.tts_remote_model)?.setText(prefs.getString(KEY_TTS_REMOTE_MODEL, DEFAULT_REMOTE_TTS_MODEL))
+        findViewById<EditText>(R.id.tts_remote_voice)?.setText(prefs.getString(KEY_TTS_REMOTE_VOICE, DEFAULT_REMOTE_TTS_VOICE))
+        findViewById<EditText>(R.id.tts_remote_key)?.setText(SecureStore.decrypt(prefs.getString(KEY_TTS_REMOTE_KEY, null) ?: "").orEmpty())
+    }
+
+    private fun testRemoteTts() {
+        val url = findViewById<EditText>(R.id.tts_remote_url).text.toString().trim()
+        val key = findViewById<EditText>(R.id.tts_remote_key).text.toString()
+        prefs.edit()
+            .putString(KEY_TTS_REMOTE_URL, url)
+            .putString(KEY_TTS_REMOTE_KEY, SecureStore.encrypt(key) ?: key)
+            .apply()
+        if (sttBaseUrl(url).isBlank()) {
+            VoxLog.dd("event=tts-remote-test ok=false reason=no-url")
+            setRemoteTtsTestResult(false)
+            Toast.makeText(this, "Remote TTS: enter a server URL first", Toast.LENGTH_LONG).show()
+            return
+        }
+        setRemoteTtsTestResult(null)
+        val model = findViewById<EditText>(R.id.tts_remote_model).text.toString().trim().ifBlank { DEFAULT_REMOTE_TTS_MODEL }
+        val voice = findViewById<EditText>(R.id.tts_remote_voice).text.toString().trim().ifBlank { DEFAULT_REMOTE_TTS_VOICE }
+        val endpoint = ttsSpeechUrl(sttBaseUrl(url))!!
+        val body = ttsSpeechBody(model, voice, "ping").toByteArray(Charsets.UTF_8)
+        val kdec = (prefs.getString(KEY_TTS_REMOTE_KEY, null) ?: "").trim().let { raw ->
+            if (raw.isEmpty()) "" else (SecureStore.decrypt(raw) ?: "")
+        }
+        Thread {
+            var ok = false
+            try {
+                val c = java.net.URL(endpoint).openConnection() as java.net.HttpURLConnection
+                try {
+                    c.requestMethod = "POST"; c.connectTimeout = 5000; c.readTimeout = 10000
+                    c.doOutput = true
+                    c.setRequestProperty("Content-Type", "application/json")
+                    if (kdec.isNotBlank()) c.setRequestProperty("Authorization", "Bearer $kdec")
+                    c.outputStream.use { it.write(body) }
+                    ok = c.responseCode in 200..299
+                    // Drain + discard (never log the body).
+                    try { (if (c.responseCode >= 400) c.errorStream else c.inputStream)?.close() } catch (_: Throwable) {}
+                } finally { c.disconnect() }
+            } catch (_: Throwable) { ok = false }
+            VoxLog.dd("event=tts-remote-test ok=$ok")
+            runOnUiThread { setRemoteTtsTestResult(ok) }
+        }.start()
+    }
+
+    private fun setRemoteTtsTestResult(state: Boolean?) {
+        val tv = findViewById<TextView>(R.id.set_tts_test_val) ?: return
+        tv.text = when (state) {
+            true -> "ok"
+            false -> "FAILED"
+            null -> "…"
+        }
+        tv.setTextColor(when (state) {
+            true -> 0xFF35D07F.toInt()
+            false -> 0xFFFF5B5B.toInt()
+            null -> androidx.core.content.ContextCompat.getColor(this, R.color.hv_cyan)
+        })
     }
 
     private fun loadSttRemoteFields() {
@@ -1017,7 +1101,7 @@ class SettingsActivity : AppCompatActivity() {
         val tok = prefs.getString(prefKey, default) ?: default
         return when (tok) {
             "on-device" -> "On-device"
-            "system" -> "System"; "kokoro" -> "System"; "piper" -> "Piper"; "piper-fr" -> "Piper FR"; "supertonic" -> "Supertonic"
+            "system" -> "System"; "kokoro" -> "System"; "piper" -> "Piper"; "piper-fr" -> "Piper FR"; "supertonic" -> "Supertonic"; "remote" -> "Remote"
             "warm" -> "Warm"; "bright" -> "Bright"; "deep" -> "Deep"
             "dark" -> "Dark"; "light" -> "Light"
             else -> tok
@@ -1097,7 +1181,7 @@ class SettingsActivity : AppCompatActivity() {
             GROUP_STT -> { loadSttRemoteFields(); refreshFlowVals() }
             GROUP_APPEARANCE -> bindKeepScreenOn()
             GROUP_VISUALS -> bindVisuals()
-            GROUP_TTS -> bindFlows()   // 0.6.5: re-read the speak toggle after restore
+            GROUP_TTS -> { bindFlows(); loadRemoteTtsFields(); refreshRemoteTtsPanel() }   // 0.6.5: re-read the speak toggle after restore
             GROUP_ENTITY -> { refreshEntityVal(); refreshFlowVals(); bindErControls() }
             GROUP_ABOUT -> { refreshFlowVals(); VoxLog.setDebugFile(false) }
             else -> refreshFlowVals()

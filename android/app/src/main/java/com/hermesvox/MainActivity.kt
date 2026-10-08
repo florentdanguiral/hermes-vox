@@ -543,8 +543,8 @@ class MainActivity : AppCompatActivity() {
             modelsGate?.visibility = android.view.View.GONE
             return
         }
-        val missing = ModelCatalog.missingRequired(this)
-        val total = ModelCatalog.required.size
+        val missing = ModelCatalog.missingRequiredFor(this)
+        val total = ModelCatalog.requiredFor(this).size
         if (missing.isEmpty()) {
             modelsGate?.visibility = android.view.View.GONE
             // Locked decision #2: the presence model is a REQUIREMENT of Enhanced Realtime. ER
@@ -596,7 +596,7 @@ class MainActivity : AppCompatActivity() {
 
     private fun buildModelsEmptyState(): android.widget.LinearLayout {
         val d = resources.displayMetrics.density
-        val need = ModelCatalog.required.size
+        val need = ModelCatalog.requiredFor(this).size
         val body = android.widget.LinearLayout(this).apply {
             orientation = android.widget.LinearLayout.VERTICAL
             gravity = android.view.Gravity.CENTER

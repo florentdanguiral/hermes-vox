@@ -1104,6 +1104,103 @@
                         style="@style/HvRowValue" />
                 </LinearLayout>
 
+                <!-- Remote TTS (server) config — revealed ONLY when the TTS
+                     engine picker above says "remote". The key field stores
+                     via SecureStore (never in prefs XML in clear). -->
+                <LinearLayout
+                    android:id="@+id/remote_tts_panel"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:visibility="gone">
+
+                    <EditText
+                        android:id="@+id/tts_remote_url"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="6dp"
+                        android:background="@drawable/bg_input"
+                        android:hint="Server URL · https://api.mistral.ai/v1"
+                        android:inputType="textUri"
+                        android:padding="14dp"
+                        android:textColor="@color/hv_text"
+                        android:textColorHint="@color/hv_text_dim"
+                        android:textSize="16sp" />
+
+                    <TextView
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="Reply text is sent to this server for synthesis when remote TTS is selected."
+                        android:textColor="@color/hv_warn"
+                        android:textSize="12sp" />
+
+                    <EditText
+                        android:id="@+id/tts_remote_model"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_input"
+                        android:hint="Model · voxtral-mini-tts-latest"
+                        android:inputType="text"
+                        android:padding="14dp"
+                        android:textColor="@color/hv_text"
+                        android:textColorHint="@color/hv_text_dim"
+                        android:textSize="16sp" />
+
+                    <EditText
+                        android:id="@+id/tts_remote_voice"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_input"
+                        android:hint="Voice · fr_marie_happy"
+                        android:inputType="text"
+                        android:padding="14dp"
+                        android:textColor="@color/hv_text"
+                        android:textColorHint="@color/hv_text_dim"
+                        android:textSize="16sp" />
+
+                    <EditText
+                        android:id="@+id/tts_remote_key"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginTop="10dp"
+                        android:background="@drawable/bg_input"
+                        android:hint="API key (optional, stored encrypted)"
+                        android:inputType="textPassword"
+                        android:padding="14dp"
+                        android:textColor="@color/hv_text"
+                        android:textColorHint="@color/hv_text_dim"
+                        android:textSize="16sp" />
+
+                    <LinearLayout
+                        android:id="@+id/row_test_tts_conn"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:orientation="horizontal"
+                        android:gravity="center_vertical"
+                        android:padding="16dp"
+                        android:layout_marginTop="10dp"
+                        android:layout_marginBottom="8dp"
+                        android:background="@drawable/bg_chip"
+                        android:clickable="true"
+                        android:focusable="true">
+                        <TextView
+                            android:layout_width="0dp"
+                            android:layout_weight="1"
+                            android:layout_height="wrap_content"
+                            android:text="Test TTS server connection"
+                            style="@style/HvRowTitle"
+                            android:textColor="@color/hv_cyan" />
+                        <TextView
+                            android:id="@+id/set_tts_test_val"
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:text=""
+                            style="@style/HvRowValue" />
+                    </LinearLayout>
+                </LinearLayout>
+
                 <LinearLayout
                     android:id="@+id/row_speak"
                     style="@style/HvRow"
