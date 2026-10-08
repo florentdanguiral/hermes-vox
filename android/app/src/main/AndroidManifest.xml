@@ -40,6 +40,16 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <!-- Digital-assistant role: lets the user set Hermes Vox as the
+                 system assistant (Settings → Apps → Default apps → Digital
+                 assistant app). The ASSIST intent is what the role chooser
+                 lists; the power-button / corner gesture then launches the
+                 app, and MainActivity auto-opens the voice line when it was
+                 the ASSIST gesture that brought it up. -->
+            <intent-filter>
+                <action android:name="android.intent.action.ASSIST" />
+                <category android:name="android.intent.category.DEFAULT" />
+            </intent-filter>
         </activity>
 
         <!-- #130: the connection form lives inside the onboarding scroll container,

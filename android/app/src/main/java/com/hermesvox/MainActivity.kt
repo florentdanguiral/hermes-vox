@@ -224,6 +224,20 @@ class MainActivity : AppCompatActivity() {
 
     override fun onNewIntent(intent: android.content.Intent?) {
         super.onNewIntent(intent); setIntent(intent); handleDebugHarness(intent)
+        maybeHandleAssistIntent(intent)
+    }
+
+    /** Digital-assistant launches (the system ASSIST gesture — power button /
+     *  corner swipe, or "Hey ..." on ROMs that provide a hotword service) open
+     *  the app with ACTION_ASSIST. Auto-open the voice line so the assistant
+     *  feels instant: one gesture → the line opens. It still shows
+     *  Initializing while the pipeline warms, and it is a no-op when no
+     *  endpoint is configured (the normal first-run surfaces own that case). */
+    private fun maybeHandleAssistIntent(i: android.content.Intent?) {
+        if (i?.action != android.content.Intent.ACTION_ASSIST) return
+        if (callLive) return
+        if (!endpointSet() || GatewayKey.isMissing(storedKey())) return
+        startCall()
     }
 
     /** DEBUG-ONLY harness entry (inert when !isDebuggable). Lets the emulator
@@ -311,6 +325,7 @@ class MainActivity : AppCompatActivity() {
 
         connectFromPrefs()
         resumeLiveCallIfAny()
+        maybeHandleAssistIntent(intent)   // assistant-role launch → open the line
         refreshModelsGate()   // #6/#12: first-run empty state / warning pill
         wireButtons()
         startAvatarLoop()

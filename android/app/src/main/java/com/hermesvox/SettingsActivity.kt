@@ -394,7 +394,7 @@ class SettingsActivity : AppCompatActivity() {
             pick("Speech-to-text (backend)",
                 arrayOf("On-device (offline)", "Platform (Google)", "Remote (server)"),
                 arrayOf(ModelCatalog.BACKEND_ONDEVICE, ModelCatalog.BACKEND_PLATFORM, ModelCatalog.BACKEND_REMOTE),
-                ModelCatalog.KEY_STT_BACKEND, R.id.set_stt_val) { refreshSttRemotePanel() }
+                ModelCatalog.KEY_STT_BACKEND, R.id.set_stt_val) { refreshSttRemotePanel(); refreshLocalSttRows() }
         }
         findViewById<LinearLayout>(R.id.row_stt_model).setOnClickListener {
             val labels = ModelCatalog.sttModels.map { it.second }.toTypedArray()
@@ -421,7 +421,7 @@ class SettingsActivity : AppCompatActivity() {
         findViewById<LinearLayout>(R.id.row_tts).setOnClickListener {
             pick("Text-to-speech",
                 arrayOf("Supertonic (on-device, recommended)", "Piper (on-device, lighter)", "Piper FR (on-device, French)", "Remote (server)", "System (fallback)"),
-                arrayOf("supertonic", "piper", "piper-fr", "remote", "system"), "tts", R.id.set_tts_val) { syncSpeakerRow(); previewVoice(); refreshRemoteTtsPanel() }
+                arrayOf("supertonic", "piper", "piper-fr", "remote", "system"), "tts", R.id.set_tts_val) { syncSpeakerRow(); previewVoice(); refreshRemoteTtsPanel(); refreshLocalSttRows() }
         }
         // Voice = the SYNTHESIS REGISTER (system/bright/deep). The old "warm"
         // option was removed — WarmTts is a no-op stub, so it never produced
@@ -475,6 +475,7 @@ class SettingsActivity : AppCompatActivity() {
         refreshModelsVal()
         bindSttRemote()
         bindRemoteTts()
+        refreshLocalSttRows()
 
         refreshFlowVals()
         refreshGrpVals()   // #115: populate the Settings-home row subtitles
@@ -564,6 +565,24 @@ class SettingsActivity : AppCompatActivity() {
         val remote = prefs.getString(ModelCatalog.KEY_STT_BACKEND, "").orEmpty() == ModelCatalog.BACKEND_REMOTE
         findViewById<android.view.View>(R.id.remote_stt_panel).visibility =
             if (remote) android.view.View.VISIBLE else android.view.View.GONE
+    }
+
+    // --- Symmetry: the local-only settings rows exist only when a local engine
+    // is in play. The STT model picker and the speech CPU-threads budget are
+    // meaningless on a remote/platform backend, so hide them there and reveal
+    // them again when the user returns to on-device (the remote panel on the
+    // other side already toggles with the same picker). ----------------------
+    private fun refreshLocalSttRows() {
+        val localStt = prefs.getString(ModelCatalog.KEY_STT_BACKEND, ModelCatalog.BACKEND_ONDEVICE)
+            .orEmpty() == ModelCatalog.BACKEND_ONDEVICE
+        val tts = prefs.getString("tts", null) ?: ModelCatalog.defaultTts(this)
+        val localTts = tts in listOf("supertonic", "piper", "piper-fr")
+        findViewById<android.view.View>(R.id.row_stt_model)?.visibility =
+            if (localStt) android.view.View.VISIBLE else android.view.View.GONE
+        // numThreads is baked into the local recognizer/synth sessions at build;
+        // with every leg remote there is nothing for it to size.
+        findViewById<android.view.View>(R.id.row_stt_threads)?.visibility =
+            if (localStt || localTts) android.view.View.VISIBLE else android.view.View.GONE
     }
 
     private fun bindSttRemote() {
